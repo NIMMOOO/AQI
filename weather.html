@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Air Quality Widget</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f9f9f9;
+      color: #333;
+    }
+    .widget {
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      max-width: 400px;
+      background: #fff;
+    }
+    .aqi-value {
+      font-size: 48px;
+      font-weight: bold;
+    }
+    .aqi-level {
+      font-size: 24px;
+      margin: 10px 0;
+    }
+    .aqi-description {
+      margin-bottom: 20px;
+      font-style: italic;
+    }
+    .pollutants {
+      display: flex;
+      justify-content: space-between;
+      margin: 10px 0;
+    }
+    .updated-time {
+      font-size: 12px;
+      color: #666;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <h2>Current Air Quality in Lucknow</h2>
+    <div class="aqi-value">--</div>
+    <div class="aqi-level">Loading...</div>
+    <div class="aqi-description">Please wait...</div>
+
+    <div class="pollutants">
+      🫁 PM2.5: <span class="pm25">--</span> µg/m³
+    </div>
+    <div class="pollutants">
+      🌫️ PM10: <span class="pm10">--</span> µg/m³
+    </div>
+    <div class="pollutants">
+      ☀️ Ozone: <span class="o3">--</span> µg/m³
+    </div>
+
+    <div class="updated-time">Updated: --</div>
+  </div>
+
+  <script>
+    const CONFIG = {
+      apiKey: 'd274f14f9a974a799c4bf6dad9ecafdb',
+      lat: 26.846695,
+      lon: 80.946167,
+      refreshInterval: 15 * 60 * 1000
+    };
+
+    const AQI_SCALE = [
+      { name: "Good", color: "#55A84F", emoji: "😊", message: "Air quality is satisfactory with little health risk" },
+      { name: "Moderate", color: "#A3C853", emoji: "😐", message: "Acceptable quality but some pollutants may affect sensitive individuals" },
+      { name: "Unhealthy for Sensitive", color: "#FED633", emoji: "😷", message: "Sensitive groups may experience health effects" },
+      { name: "Unhealthy", color: "#F29E33", emoji: "😨", message: "Everyone may begin to experience health effects" },
+      { name: "Very Unhealthy", color: "#E93F33", emoji: "😱", message: "Health warnings of emergency conditions" },
+      { name: "Hazardous", color: "#AF2D24", emoji: "☠️", message: "Everyone may experience serious effects" }
+    ];
+
+    const elements = {
+      aqiValue: document.querySelector('.aqi-value'),
+      aqiLevel: document.querySelector('.aqi-level'),
+      aqiDesc: document.querySelector('.aqi-description'),
+      pm25: document.querySelector('.pm25'),
+      pm10: document.querySelector('.pm10'),
+      o3: document.querySelector('.o3'),
+      updatedTime: document.querySelector('.updated-time')
+    };
+
+    async function getAQIData() {
+      const url = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${CONFIG.lat}&lon=${CONFIG.lon}&appid=${CONFIG.apiKey}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch AQI data");
+      return await res.json();
+    }
+
+    function updateUI(data) {
+      const aqiIndex = data.list[0].main.aqi;
+      const pollution = data.list[0].components;
+      const timestamp = new Date(data.list[0].dt * 1000);
+
+      const info = AQI_SCALE[aqiIndex - 1];
+      elements.aqiValue.textContent = aqiIndex;
+      elements.aqiValue.style.color = info.color;
+      elements.aqiLevel.innerHTML = `${info.name} ${info.emoji}`;
+      elements.aqiDesc.textContent = info.message;
+
+      elements.pm25.textContent = pollution.pm2_5.toFixed(1);
+      elements.pm10.textContent = pollution.pm10.toFixed(1);
+      elements.o3.textContent = pollution.o3.toFixed(1);
+
+      elements.updatedTime.textContent = `Updated: ${timestamp.toLocaleString()}`;
+    }
+
+    async function loadAQIData() {
+      try {
+        const data = await getAQIData();
+        updateUI(data);
+      } catch (err) {
+        elements.aqiLevel.textContent = "Error loading data";
+        elements.updatedTime.textContent = err.message;
+      }
+    }
+
+    loadAQIData();
+    setInterval(loadAQIData, CONFIG.refreshInterval);
+  </script>
+</body>
+</html>
